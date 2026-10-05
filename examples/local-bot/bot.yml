@@ -1,0 +1,10 @@
+name: "MyBot"
+enabled: true
+entrypoint: "example.MyBot"
+token: "PASTE_TOKEN_HERE"
+intents:
+  - GUILDS
+auto-register-slash: true
+activity:
+  type: playing
+  text: "Minecraft"

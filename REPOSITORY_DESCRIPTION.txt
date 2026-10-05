@@ -1,0 +1,12 @@
+GitHub description:
+Run Java bots inside Paper with Discord, Minecraft, HTTP, storage, scheduling, console events, slash commands, and runtime controls.
+
+Suggested topics:
+minecraft
+paper
+paper-plugin
+minecraft-plugin
+java
+discord-bot
+bot-runtime
+bukkit
