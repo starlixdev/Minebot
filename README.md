@@ -2,6 +2,8 @@
 
 MineBOT runs Java bots inside a Paper server. Each bot has its own configuration, JSON storage, Discord connection and serial runtime. Bot code can use Discord REST and gateway events, Bukkit events, server commands, broadcasts, HTTP requests, scheduled work and structured console logs through the MineBOT Java API.
 
+MineBOT is designed to keep working on future Minecraft versions without requiring full or version-specific updates. The latest Minecraft version it has been tested on is `26.2`.
+
 Version: `2.1.1-java`
 
 ## Requirements
