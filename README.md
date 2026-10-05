@@ -1,27 +1,20 @@
 # MineBOT
 
-MineBOT runs Java bots inside a Paper server. Bots can use Discord, Minecraft server actions, HTTP requests, persistent JSON storage, scheduled tasks, slash commands, and structured console log events through one runtime.
+MineBOT runs Java bots inside a Paper server. Each bot has its own configuration, JSON storage, Discord connection and serial runtime. Bot code can use Discord REST and gateway events, Bukkit events, server commands, broadcasts, HTTP requests, scheduled work and structured console logs through the MineBOT Java API.
 
-The current release is `2.1.1-java`.
+Version: `2.1.1-java`
 
 ## Requirements
 
-- A Paper-compatible Minecraft server.
-- Bukkit/Paper API target: `1.20`.
-- Java 17 bytecode. Some Paper versions require a newer Java runtime.
+- Paper or another Bukkit-compatible server with the APIs used by the plugin.
+- Java 17 or newer.
+- The bundled plugin descriptor targets Bukkit API `1.20`.
 
 ## Install
 
-1. Copy `release/MineBOT-2.1.1-java.jar` to the server's `plugins` folder.
-2. Start or restart the server.
-3. MineBOT creates its data folder and `Bots` directory.
-4. Run `/minebot create <name>` to create a bot folder, or add an existing bot folder manually.
+Copy `release/MineBOT-2.1.1-java.jar` to the server's `plugins` directory and start the server. MineBOT creates `plugins/MineBOT/`, `plugins/MineBOT/Bots/`, `config.yml` and `secrets.yml` as needed.
 
-The default plugin configuration is in [`resources/config.yml`](resources/config.yml).
-
-## Commands
-
-MineBOT administration commands require `minebot.admin`. The permission defaults to server operators.
+Administration commands use the `minebot.admin` permission, which defaults to server operators.
 
 ```text
 /minebot list
@@ -33,9 +26,11 @@ MineBOT administration commands require `minebot.admin`. The permission defaults
 /minebot status <name>
 ```
 
-## Local Java bots
+Bot identifiers are 1-48 characters and may contain letters, digits, `_` and `-`.
 
-A local bot lives in its own directory under `plugins/MineBOT/Bots/`:
+## Local Bots
+
+A local bot is stored under `plugins/MineBOT/Bots/<name>/`:
 
 ```text
 plugins/MineBOT/Bots/MyBot/
@@ -44,13 +39,13 @@ plugins/MineBOT/Bots/MyBot/
 └── bot.jar
 ```
 
-Example `bot.yml`:
+The folder name must match the bot name. When `entrypoint` is present, `bot.jar` must exist and the entrypoint class must be public, concrete, extend `com.minebot.api.JavaBot` and have a public no-argument constructor.
 
 ```yaml
 name: "MyBot"
 enabled: true
 entrypoint: "example.MyBot"
-token: "PASTE_TOKEN_HERE"
+token: "${ENV:MYBOT_DISCORD_TOKEN}"
 intents:
   - GUILDS
 auto-register-slash: true
@@ -59,13 +54,11 @@ activity:
   text: "Minecraft"
 ```
 
-The class named by `entrypoint` must be public, concrete, extend `com.minebot.api.JavaBot`, and have a public no-argument constructor.
+`token` accepts a literal Discord bot token or an environment reference in the form `${ENV:VARIABLE_NAME}`. Discord intents can be listed by name. `intents-value` can be used instead when a numeric intent bitmask is needed.
 
-Do not bundle MineBOT API classes into the bot JAR. Compile against MineBOT as a compile-only dependency. The local bot classloader uses MineBOT as its parent, so the API and server-provided dependencies are available at runtime.
+Supported activity types are `playing`, `streaming`, `listening`, `watching`, `custom` and `competing`.
 
-If a registered provider and a local bot use the same bot name, the registered provider is used.
-
-### Minimal bot
+### Minimal Bot
 
 ```java
 package example;
@@ -91,82 +84,106 @@ public final class MyBot extends JavaBot {
 }
 ```
 
-## Provider plugins
+Compile local bots against MineBOT without packaging MineBOT API classes into `bot.jar`. The local bot classloader uses MineBOT as its parent, so the API and server-provided classes remain available at runtime.
 
-A companion Paper plugin can register a bot directly:
+## Provider Plugins
+
+A companion Paper plugin can register a `JavaBot` factory:
 
 ```java
 MineBotJavaApi.registerProvider("MyBot", MyBot::new);
 ```
 
-Its `plugin.yml` should declare MineBOT as a dependency:
+The bot still uses its folder and `bot.yml` under `plugins/MineBOT/Bots/`. A registered provider takes precedence over a local `entrypoint` with the same bot name. Companion plugins should declare MineBOT as a dependency in `plugin.yml`:
 
 ```yaml
 depend: [MineBOT]
 ```
 
-Local bots and registered providers receive the same `BotContext` API.
+## Java API
 
-## Bot API
+`BotContext` is the main API available to a running bot:
 
-`BotContext` gives each bot access to:
+- `discord()` exposes Discord state, REST requests, interaction replies, command registration and presence updates.
+- `minecraft()` returns a server snapshot and can dispatch console commands or broadcasts.
+- `http()` performs asynchronous HTTP requests.
+- `storage()` reads and writes the bot's `data.json` file.
+- `console()` subscribes to structured server log events.
+- `waitFor(...)` and `every(...)` schedule delayed or repeating work.
+- `executeSerial(...)` queues work on the bot's serial dispatcher.
+- `secret(...)` reads a named value from `plugins/MineBOT/secrets.yml`.
 
-- `discord()` for Discord REST requests, interactions, slash commands, and presence.
-- `minecraft()` for server snapshots, console commands, and broadcasts.
-- `http()` for asynchronous HTTP requests.
-- `storage()` for persistent per-bot data.
-- `console()` for structured server log subscriptions.
-- `waitFor(...)` for delayed asynchronous work.
-- `every(...)` for repeating tasks.
-- `executeSerial(...)` for returning work to the bot's serial dispatcher.
+The complete public signatures are listed in [`docs/API.md`](docs/API.md). The API source is under [`src/main/java/com/minebot/api`](src/main/java/com/minebot/api).
 
-The public Java signatures included in this build are listed in [`docs/API.md`](docs/API.md).
+## Minecraft Events
 
-## Console events
+`JavaBot.minecraftEvents()` returns the Bukkit events a bot wants to receive. MineBOT accepts fully qualified Bukkit event class names and these aliases:
 
-Bots can subscribe to server console events:
-
-```java
-AutoCloseable subscription = bot().console().subscribe(event -> {
-    String source = event.logger();
-    String level = event.level();
-    String message = event.message();
-});
+```text
+player_join
+player_quit
+player_chat
+player_command
+player_death
+block_break
+block_place
+server_command
 ```
 
-A console event contains its timestamp, level, logger name, message, and immutable throwable data. MineBOT reads from the server's Log4j pipeline when it is available and falls back to JUL otherwise.
+Event data is converted to immutable `EventData`. The snapshot includes `event.class` and values exposed through zero-argument Bukkit getters.
 
-Close a subscription when the bot no longer needs it. MineBOT also removes active subscriptions when the runtime stops.
+## Secrets
 
-## Runtime behavior
+MineBOT creates `plugins/MineBOT/secrets.yml`. Values can be stored directly or read from environment variables:
 
-Bot callbacks and console subscribers run through a bounded serial dispatcher. Network and HTTP work stays asynchronous. If an asynchronous continuation needs to run again on the bot dispatcher, use `BotContext.executeSerial(...)`.
+```yaml
+secrets:
+  EXAMPLE_API_KEY: "${ENV:EXAMPLE_API_KEY}"
+```
 
-MineBOT can load, start, stop, reload, validate, and inspect local bots and registered providers. Reloading closes the current runtime and, for a local bot, its classloader before MineBOT loads the bot again.
+Bot code reads a value with:
 
-## Storage
+```java
+String key = bot().secret("EXAMPLE_API_KEY");
+```
 
-Each bot has its own `data.json`. The storage API can read, set, delete, check, and snapshot values in that file.
+Configured secrets are redacted from MineBOT-managed error text and data paths that pass through its redaction layer.
 
-## Repository files
+## Plugin Configuration
+
+`src/main/resources/config.yml` contains the runtime defaults:
+
+| Setting | Default | Purpose |
+| --- | ---: | --- |
+| `http-timeout-seconds` | `20` | Overall HTTP request timeout. |
+| `http-connect-timeout-seconds` | `10` | HTTP connection timeout. |
+| `http-worker-threads` | `4` | HTTP worker thread count. |
+| `http-max-response-bytes` | `2097152` | Maximum HTTP response body size. |
+| `runtime-max-pending-events` | `1024` | Requested event queue capacity. The runtime never creates a queue smaller than 16 entries. |
+| `runtime-max-event-age-seconds` | `30` | Events older than this value are counted as stale instead of executed. |
+| `runtime-coalesce-timers` | `true` | Prevents repeating timer callbacks from stacking while a previous callback is still pending. |
+
+## Build
+
+The project uses Maven and targets Java 17.
+
+```text
+mvn clean package
+```
+
+The build writes `target/MineBOT-2.1.1-java.jar`.
+
+## Repository Layout
 
 ```text
 MineBOT/
+├── src/main/java/          Java source
+├── src/main/resources/     plugin.yml, config.yml and bundled API notes
+├── docs/API.md             public Java API reference
+├── examples/local-bot/     minimal bot configuration and data file
+├── release/                release JAR
+├── pom.xml                 Maven build
 ├── README.md
 ├── CHANGELOG.md
-├── SECURITY.md
-├── SHA256SUMS.txt
-├── .gitignore
-├── .gitattributes
-├── release/
-│   └── MineBOT-2.1.1-java.jar
-├── resources/
-│   ├── config.yml
-│   └── plugin.yml
-├── examples/
-│   └── local-bot/
-│       ├── bot.yml
-│       └── data.json
-└── docs/
-    └── API.md
+└── SECURITY.md
 ```

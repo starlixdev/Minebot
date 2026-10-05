@@ -1,7 +1,7 @@
 name: "MyBot"
 enabled: true
 entrypoint: "example.MyBot"
-token: "PASTE_TOKEN_HERE"
+token: "${ENV:MYBOT_DISCORD_TOKEN}"
 intents:
   - GUILDS
 auto-register-slash: true

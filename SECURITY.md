@@ -1,9 +1,9 @@
 # Security Policy
 
-Do not commit Discord bot tokens, API keys, passwords, session credentials, or production `data.json` files.
+Do not include Discord bot tokens, API keys, passwords, session credentials or production bot data in public issues, logs, screenshots or example files.
 
-Keep bot tokens in the server-side MineBOT configuration. Remove credentials and other sensitive values from screenshots, issue reports, logs, and examples before publishing them.
+MineBOT supports environment-backed values in `bot.yml` and `secrets.yml`, which avoids storing those values directly in repository files.
 
 ## Reporting a Security Issue
 
-Send security reports privately to the project owner. Do not post credentials, working exploits, or other sensitive details in a public GitHub issue.
+Use a private contact method for security reports. Public issues should not contain credentials, working exploits or other sensitive details.

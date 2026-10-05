@@ -1,10 +1,10 @@
 # MineBOT Java API
 
-MineBOT `2.1.1-java` exposes the following public Java API.
+MineBOT `2.1.1-java` exposes the classes below from `com.minebot.api`.
 
 ## `JavaBot`
 
-A bot implementation extends `JavaBot`. MineBOT supplies its `BotContext` and calls the lifecycle and event methods at runtime.
+A bot implementation extends `JavaBot`. MineBOT attaches a `BotContext` before starting the bot.
 
 ```java
 public abstract class JavaBot {
@@ -21,9 +21,9 @@ public abstract class JavaBot {
 }
 ```
 
-## `BotContext`
+`onLoad()` runs before the Discord gateway starts. `onReady()` runs after Discord sends `READY`. Slash-command registration happens after `onReady()` when `auto-register-slash` is enabled and `slashCommands()` is not empty.
 
-`BotContext` is the per-bot entry point for configuration, Discord, Minecraft, storage, HTTP, console logs, scheduling, secrets, and runtime state.
+## `BotContext`
 
 ```java
 public final class BotContext {
@@ -44,9 +44,9 @@ public final class BotContext {
 }
 ```
 
-## `MineBotJavaApi`
+`every(...)` and `console().subscribe(...)` return handles that can be closed when the bot no longer needs them. Runtime shutdown also closes active subscriptions and scheduled work.
 
-Static API for creating bots, registering providers, changing runtime state, listing bot names, and validating configuration.
+## `MineBotJavaApi`
 
 ```java
 public final class MineBotJavaApi {
@@ -63,9 +63,9 @@ public final class MineBotJavaApi {
 }
 ```
 
-## `DiscordApi`
+`available()` is true while the plugin has an active `BotManager`. Provider registration uses the same bot configuration directory as local bots.
 
-Discord connection state, REST requests, interaction responses, command registration, and presence updates.
+## `DiscordApi`
 
 ```java
 public final class DiscordApi {
@@ -75,8 +75,17 @@ public final class DiscordApi {
     public String botUsername();
     public CompletableFuture<DiscordResponse> send(String channelId, String content);
     public CompletableFuture<DiscordResponse> request(String method, String path, String body);
-    public CompletableFuture<DiscordResponse> interactionReply(String interactionId, String token, String content, boolean ephemeral);
-    public CompletableFuture<DiscordResponse> interactionDefer(String interactionId, String token, boolean ephemeral);
+    public CompletableFuture<DiscordResponse> interactionReply(
+        String interactionId,
+        String token,
+        String content,
+        boolean ephemeral
+    );
+    public CompletableFuture<DiscordResponse> interactionDefer(
+        String interactionId,
+        String token,
+        boolean ephemeral
+    );
     public CompletableFuture<DiscordResponse> editOriginal(String token, String content);
     public CompletableFuture<DiscordResponse> followup(String token, String content, boolean ephemeral);
     public CompletableFuture<DiscordResponse> registerGlobalCommands(Collection<SlashCommand> commands);
@@ -94,6 +103,8 @@ public final class MinecraftApi {
 }
 ```
 
+`command(...)` and `broadcast(...)` are scheduled on the Bukkit server thread.
+
 ## `HttpApi`
 
 ```java
@@ -110,6 +121,8 @@ public final class HttpApi {
 }
 ```
 
+HTTP work is asynchronous and uses the timeout, worker-count and response-size limits from MineBOT's plugin configuration.
+
 ## `StorageApi`
 
 ```java
@@ -123,15 +136,17 @@ public final class StorageApi {
 }
 ```
 
-## `ConsoleApi`
+Storage is persisted in the bot's `data.json` file.
 
-`subscribe` returns an `AutoCloseable` handle for removing the subscription.
+## `ConsoleApi`
 
 ```java
 public final class ConsoleApi {
     public AutoCloseable subscribe(Consumer<ConsoleLogEvent> consumer);
 }
 ```
+
+Console events are delivered through the bot's serial dispatcher.
 
 ## `SlashCommand`
 
@@ -145,6 +160,8 @@ public record SlashCommand(
     public Map<String, Object> toDiscord();
 }
 ```
+
+Command names must contain 1-32 lowercase letters, digits, `_` or `-`. Descriptions are limited to 1-100 characters. MineBOT validates option types, names, descriptions, nesting depth and the 25-option limit before registration.
 
 ## `Interaction`
 
@@ -164,6 +181,7 @@ public final class Interaction {
 
 ```java
 public final class EventData {
+    public EventData(Map<String, Object> values);
     public Map<String, Object> asMap();
     public Object get(String key);
     public String string(String key);
@@ -171,6 +189,8 @@ public final class EventData {
     public long longValue(String key, long defaultValue);
 }
 ```
+
+`get(...)` supports dot-separated paths through nested maps. Event values are frozen into immutable maps, lists and sets when the `EventData` object is created.
 
 ## `BotConfiguration`
 
@@ -188,6 +208,7 @@ public record BotConfiguration(
 ## `BotProvider`
 
 ```java
+@FunctionalInterface
 public interface BotProvider {
     JavaBot create() throws Exception;
 }
