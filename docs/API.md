@@ -1,6 +1,6 @@
 # MineBOT Java API
 
-The signatures below are from the public API included in the packaged `2.1.1-java` build.
+MineBOT `2.1.1-java` exposes the following public Java API.
 
 ## `JavaBot`
 

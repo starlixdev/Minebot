@@ -2,7 +2,6 @@
 
 ## 2.1.1-java
 
-Packaged release included in this repository.
 
 - Loads local Java bots from per-bot JAR files.
 - Accepts bot providers registered by companion Paper plugins.

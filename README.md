@@ -2,7 +2,7 @@
 
 MineBOT runs Java bots inside a Paper server. Bots can use Discord, Minecraft server actions, HTTP requests, persistent JSON storage, scheduled tasks, slash commands, and structured console log events through one runtime.
 
-This repository contains the packaged `2.1.1-java` build.
+The current release is `2.1.1-java`.
 
 ## Requirements
 
@@ -155,7 +155,6 @@ MineBOT/
 ├── README.md
 ├── CHANGELOG.md
 ├── SECURITY.md
-├── REPOSITORY_DESCRIPTION.txt
 ├── SHA256SUMS.txt
 ├── .gitignore
 ├── .gitattributes
@@ -171,11 +170,3 @@ MineBOT/
 └── docs/
     └── API.md
 ```
-
-## Source code
-
-This repository was assembled from the compiled MineBOT JAR supplied for publication. The original Java source files are not stored inside a compiled JAR, so they are not included in this package.
-
-## License
-
-No license file is included. Add a license before publishing the project as open source if you want other people to have explicit permission to use, modify, or redistribute the code.
